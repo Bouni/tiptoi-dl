@@ -21,12 +21,13 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
   "Intended Audience :: Developers",
-	"Intended Audience :: End Users/Desktop"
+	"Intended Audience :: End Users/Desktop",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3.12",
 	"Operating System :: POSIX :: Linux",
 	"Topic :: Multimedia :: Sound/Audio",
 ]
+
 [project.urls]
 Homepage = "https://github.com/Bouni/tiptoi-dl"
 Documentation = "https://github.com/Bouni/tiptoi-dl"
