@@ -1,0 +1,38 @@
+[project]
+name = "tiptoi-dl"
+version = "2024.08.01"
+description = "A linux CLI TipToi audiofile downloader."
+dependencies = [
+    "requests>=2.32.3",
+    "psutil>=6.0.0",
+    "beautifulsoup4>=4.12.3"
+]
+requires-python = ">=3.12"
+authors = [
+    {name = "Bouni", email = "bouni-github@owee.de"},
+]
+maintainers = [
+    {name = "Bouni", email = "bouni-github@owee.de"},
+]
+readme = "README.md"
+license = {text = "MIT License"}
+keywords = ["egg", "cli", "tool"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+	"Intended Audience :: End Users/Desktop"
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.12",
+	"Operating System :: POSIX :: Linux",
+	"Topic :: Multimedia :: Sound/Audio",
+]
+[project.urls]
+Homepage = "https://github.com/Bouni/tiptoi-dl"
+Documentation = "https://github.com/Bouni/tiptoi-dl"
+Repository = "https://github.com/me/spam.git"
+Issues = "https://github.com/Bouni/tiptoi-dl/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
