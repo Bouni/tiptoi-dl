@@ -1,19 +1,3 @@
-[project0
-name = "tiptoi-dl"
-version = "0.1.0"
-description = "A TipToi Download helper"
-readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [
-    "beautifulsoup4>=4.14.2",
-    "coloredlogs>=15.0.1",
-    "psutil>=7.1.0",
-    "requests>=2.32.5",
-    "tqdm>=4.67.1",
-]
-
-[project.scripts]
-tiptoi-dl = "tiptoidl:main"
 # TipToi-dl
 
 [![Generate TipToi catalog](https://github.com/Bouni/tiptoi-dl/actions/workflows/catalog.yaml/badge.svg)](https://github.com/Bouni/tiptoi-dl/actions/workflows/catalog.yaml)
@@ -31,19 +15,29 @@ So I decided to build this little CLI that allows me to download and copy the au
 
 1. Install uv if you have not already (see https://docs.astral.sh/uv/getting-started/installation/)
 2. Run `uv tool install tiptoi-dl` (or `uv tool install git+https://github.com/Bouni/tiptoi-dl.git` for the main branch)
-3. Run the script: `tiptoi-dl`
+3. Run the app: `tiptoi-dl`
 
 > [!NOTE]
-> If the command is not found, the path is most likely not in your PATH. 
+> If the command is not found, the path is most likely not in your PATH.
 > run `uv tool update-shell` to fix that
 
 ## Usage
 
-You can enter any word thats in the title of a book, afterwards you get a list of possible matches.
-The script guides you through the rest of the steps and will download the .gme file automatically if the TipToi pen is connected via USB and mounted.
-Otherwise the .gme file is downloaded into your Downloads folder.
+On start, tiptoi-dl loads the full catalog and shows it in a table.
 
-![](https://github.com/Bouni/tiptoi-dl/blob/d73cdd2e0c5f3f5bb59584a734ea6f9805bd51bb/demo.gif)
+| Key | Action |
+| --- | --- |
+| type in the search bar | filter the catalog by name or product ID |
+| `Tab` | jump from the search bar to the table |
+| `↑` / `↓` | select an entry |
+| `Enter` | show details of the selected entry |
+| `Ctrl+D` | download the `.gme` file of the selected entry |
+| `Ctrl+Q` | quit |
+
+If a TipToi pen is connected via USB and mounted, the `.gme` file is saved directly onto it.
+Otherwise it is saved into the current directory.
+
+![](demo.gif)
 
 ## Disclaimer
 
