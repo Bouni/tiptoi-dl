@@ -55,6 +55,18 @@ class RainbowProgress(ProgressBar):
         )
 
 
+class SearchInput(Input):
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding(
+            "tab",
+            "app.focus_next",
+            "Go to table",
+            key_display="Tab",
+            show=True,
+        ),
+    ]
+
+
 class CatalogTable(DataTable):
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding(
@@ -203,7 +215,10 @@ class TipToiDlApp(App):
         with Vertical():
             yield RainbowProgress(total=50, show_eta=False, id="progress_bar")
             yield Static("Download catalog", id="status_label")
-            yield Input(placeholder="Search…", id="search_input")
+            yield SearchInput(
+                placeholder="Search… (press Tab to jump to the table)",
+                id="search_input",
+            )
             yield CatalogTable(id="catalog_table")
 
     async def on_unmount(self) -> None:
