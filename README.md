@@ -1,7 +1,5 @@
 # TipToi-dl
 
-[![Generate TipToi catalog](https://github.com/Bouni/tiptoi-dl/actions/workflows/catalog.yaml/badge.svg)](https://github.com/Bouni/tiptoi-dl/actions/workflows/catalog.yaml)
-
 A linux CLI TipToi audiofile downloader.
 
 ## Motivation
