@@ -6,5 +6,4 @@ build
 __pycache__
 *egg*
 
-.env
 *.gme

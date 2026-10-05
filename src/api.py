@@ -1,26 +1,21 @@
 import logging
-import os
 from collections.abc import Callable
 from typing import Literal, Self
 
 import anyio
 import httpx
-from dotenv import load_dotenv
-
-load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# Bearer token of the official tiptoi Manager app
+JWT = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsidGlwdG9pIl0sInNjb3BlIjpbInJlYWQiLCJ3cml0ZSJdLCJleHAiOjE3NzAzNzk1NjcsImF1dGhvcml0aWVzIjpbIlJPTEVfQ0xJRU5UIl0sImp0aSI6IjU0NDE1MzFlLTUwNTEtNGI3MC04MDZkLTY0NTM1NzUxZmJlZiIsImNsaWVudF9pZCI6InRpcHRvaS1tYW5hZ2VyLXYyIn0.jvQpiQJp577NTMBbiOkyBIKSt_OYIBi4fLuKJBOQAX69U7S1DwQBeilx40MsTUDNcDRagfYGmUSqPxn4ahhJ4MRtLxUjxoz932p3oR9mvI5-gUkgL03KwNNKj0ShQ2z0AJY1YlUmJJdp-DokzkLbe20X-ad-fqctxtUFEaQ6kxv-G6fAk2sOEkTQf9Gg4z37s6l2XtRFk7YfwhEuvvPHg-qTzEV45IMZQtiuDb9FESZF5Fu44zFcxmpBm-3sK_tCAlsoF4J9x47OSxq4wWdvkSgqCYg0pp0jBXfFKe3qsiLJNjdzM22LShgwf3jlU74b6NnkLodEsQE1XE0TS9vkew"
 
 languages = Literal["de_DE", "nl_NL", "fr_FR", "it_IT", "ru_RU"]
 
 
 class TipToiAPI:
     def __init__(self, jwt: str | None = None):
-        jwt = jwt or os.getenv("RAVENSBURGER_JWT")
-        if not jwt:
-            raise RuntimeError(
-                "No JWT found. Set RAVENSBURGER_JWT in the environment or in .env"
-            )
+        jwt = jwt or JWT
         self.base_url = "https://ttapiv2.ravensburger.com/api/v2"
         self.client = httpx.AsyncClient(
             headers={

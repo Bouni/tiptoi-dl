@@ -10,7 +10,6 @@ dependencies = [
     "coloredlogs>=15.0.1",
     "httpx>=0.28.1",
     "psutil>=7.1.0",
-    "python-dotenv>=1.2.4",
     "requests>=2.32.5",
     "textual>=8.2.8",
     "tqdm>=4.67.1",
