@@ -19,6 +19,20 @@ Show
 # Catalog loads
 Sleep 4s
 
+# Switch the catalog language (de_DE -> nl_NL -> fr_FR -> it_IT)
+Ctrl+l
+Sleep 3s
+Ctrl+l
+Sleep 3s
+Ctrl+l
+Sleep 3s
+
+# Cycle on past ru_RU back to de_DE
+Ctrl+l
+Sleep 300ms
+Ctrl+l
+Sleep 4s
+
 # Filter the catalog
 Type "Feuerwehr"
 Sleep 1500ms
