@@ -23,7 +23,7 @@ from textual.widgets import (
 )
 from textual.widgets.button import ButtonVariant
 
-from api import TipToiAPI, languages
+from tiptoi_dl.api import TipToiAPI, languages
 
 logger = logging.getLogger(__name__)
 
