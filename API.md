@@ -1,5 +1,38 @@
 # Reverse engineered TipToi API
 
+## Authentication
+
+The `<JWT>` used by the other requests is obtained via an OAuth2 client credentials grant.
+The Basic auth header contains the hardcoded client credentials of the tiptoi Manager (`tiptoi-manager-v2:CYmWkYyhY3traWuGd5cHcNV`).
+
+**Request**:
+
+```
+POST /oauth/token HTTP/2
+Host: oauth.ravensburger.com
+Accept: */*
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic dGlwdG9pLW1hbmFnZXItdjI6Q1ltV2tZeWhZM3RyYVd1R2Q1Y0hjTlY=
+User-Agent: tiptoiManager/5.2
+X-Unity-Version: 2021.3.30f1
+Content-Length: 29
+
+grant_type=client_credentials
+```
+
+**Response**:
+
+```
+{
+  "access_token":"<JWT>",
+  "token_type":"bearer",
+  "expires_in":3599,
+  "scope":"read write",
+  "jti":"d9cefee5-376c-40f3-b3fa-e51847427c6c"
+}
+```
+
 ## Config / Firmware
 
 **Request**:

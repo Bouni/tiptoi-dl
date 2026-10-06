@@ -1,4 +1,5 @@
 import logging
+import time
 from collections.abc import Callable
 from typing import Literal, Self
 
@@ -7,25 +8,29 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-# Bearer token of the official tiptoi Manager app
-JWT = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsidGlwdG9pIl0sInNjb3BlIjpbInJlYWQiLCJ3cml0ZSJdLCJleHAiOjE3NzAzNzk1NjcsImF1dGhvcml0aWVzIjpbIlJPTEVfQ0xJRU5UIl0sImp0aSI6IjU0NDE1MzFlLTUwNTEtNGI3MC04MDZkLTY0NTM1NzUxZmJlZiIsImNsaWVudF9pZCI6InRpcHRvaS1tYW5hZ2VyLXYyIn0.jvQpiQJp577NTMBbiOkyBIKSt_OYIBi4fLuKJBOQAX69U7S1DwQBeilx40MsTUDNcDRagfYGmUSqPxn4ahhJ4MRtLxUjxoz932p3oR9mvI5-gUkgL03KwNNKj0ShQ2z0AJY1YlUmJJdp-DokzkLbe20X-ad-fqctxtUFEaQ6kxv-G6fAk2sOEkTQf9Gg4z37s6l2XtRFk7YfwhEuvvPHg-qTzEV45IMZQtiuDb9FESZF5Fu44zFcxmpBm-3sK_tCAlsoF4J9x47OSxq4wWdvkSgqCYg0pp0jBXfFKe3qsiLJNjdzM22LShgwf3jlU74b6NnkLodEsQE1XE0TS9vkew"
+# OAuth client credentials of the official tiptoi Manager app
+CLIENT_ID = "tiptoi-manager-v2"
+CLIENT_SECRET = "CYmWkYyhY3traWuGd5cHcNV"
+TOKEN_URL = "https://oauth.ravensburger.com/oauth/token"
 
 languages = Literal["de_DE", "nl_NL", "fr_FR", "it_IT", "ru_RU"]
 
 
 class TipToiAPI:
     def __init__(self, jwt: str | None = None):
-        jwt = jwt or JWT
+        self.jwt = jwt
+        self.jwt_expires_at = float("inf") if jwt else 0.0
         self.base_url = "https://ttapiv2.ravensburger.com/api/v2"
         self.client = httpx.AsyncClient(
             headers={
                 "Host": "ttapiv2.ravensburger.com",
                 "Accept": "*/*",
-                "Authorization": f"Bearer {jwt}",
                 "User-Agent": "tiptoiManager/5.2",
                 "X-Unity-Version": "2021.3.30f1",
             }
         )
+        if jwt:
+            self.client.headers["Authorization"] = f"Bearer {jwt}"
         self.file_client = httpx.AsyncClient(
             headers={
                 "Accept": "*/*",
@@ -44,7 +49,25 @@ class TipToiAPI:
     async def __aexit__(self, *exc_info) -> None:
         await self.aclose()
 
+    async def _ensure_token(self) -> None:
+        """Fetch a new bearer token if there is none or it is about to expire."""
+        if time.monotonic() < self.jwt_expires_at:
+            return
+        r = await self.client.post(
+            TOKEN_URL,
+            headers={"Host": "oauth.ravensburger.com"},
+            auth=(CLIENT_ID, CLIENT_SECRET),
+            data={"grant_type": "client_credentials"},
+        )
+        r.raise_for_status()
+        token = r.json()
+        self.jwt = token["access_token"]
+        # Refresh a minute early to avoid using a token right as it expires
+        self.jwt_expires_at = time.monotonic() + token.get("expires_in", 0) - 60
+        self.client.headers["Authorization"] = f"Bearer {self.jwt}"
+
     async def get_catalog(self, language: languages = "de_DE") -> dict:
+        await self._ensure_token()
         r = await self.client.get(f"{self.base_url}/catalog/{language}")
         if r.is_success:
             return r.json()
