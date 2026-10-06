@@ -23,7 +23,7 @@ from textual.widgets import (
 )
 from textual.widgets.button import ButtonVariant
 
-from api import TipToiAPI
+from api import TipToiAPI, languages
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +147,48 @@ class CatalogTable(DataTable):
 
     def on_resize(self, event: events.Resize) -> None:
         cast("TipToiDlApp", self.app).fit_description_column()
+
+
+class LanguageFlag(Static):
+    """A clickable flag that switches the catalog language.
+
+    Flags are drawn with block characters instead of emoji, which many
+    terminals can't display.
+    """
+
+    # (stripe direction, stripe colors from top/left to bottom/right)
+    FLAGS: ClassVar[dict[str, tuple[str, tuple[str, str, str]]]] = {
+        "de_DE": ("horizontal", ("#000000", "#DD0000", "#FFCE00")),
+        "nl_NL": ("horizontal", ("#AE1C28", "#FFFFFF", "#21468B")),
+        "fr_FR": ("vertical", ("#0055A4", "#FFFFFF", "#EF4135")),
+        "it_IT": ("vertical", ("#009246", "#FFFFFF", "#CE2B37")),
+        "ru_RU": ("horizontal", ("#FFFFFF", "#0039A6", "#D52B1E")),
+    }
+
+    def __init__(self, language: languages) -> None:
+        super().__init__(self._draw(*self.FLAGS[language]), classes="language_flag")
+        self.language: languages = language
+        self.tooltip = language
+        self.border_subtitle = language[-2:]
+
+    @staticmethod
+    def _draw(direction: str, colors: tuple[str, str, str]) -> Text:
+        """Draw a tricolor flag that is six cells wide and two rows high."""
+        first, middle, last = colors
+        if direction == "vertical":
+            row = Text.assemble(*(("  ", f"on {color}") for color in colors))
+            return Text("\n").join([row, row.copy()])
+        # Split two rows into stripes of 5/16, 6/16 and 5/16 using lower eighth
+        # blocks
+        return Text("\n").join(
+            [
+                Text("▃" * 6, style=f"{middle} on {first}"),
+                Text("▅" * 6, style=f"{last} on {middle}"),
+            ]
+        )
+
+    def on_click(self) -> None:
+        cast("TipToiDlApp", self.app).set_language(self.language)
 
 
 class DetailScreen(ModalScreen[None]):
@@ -334,6 +376,13 @@ class TipToiDlApp(App):
             show=True,
             priority=True,
         ),
+        Binding(
+            "ctrl+l",
+            "next_language",
+            "Switch language",
+            key_display="Ctrl+l",
+            show=True,
+        ),
     ]
 
     CSS = """
@@ -438,9 +487,35 @@ class TipToiDlApp(App):
         padding-left: 1;
     }
 
-    Footer {
-        padding: 0 0;
+    #bottom_bar {
+        dock: bottom;
+        height: 4;
         margin-bottom: 1;
+    }
+
+    #bottom_bar Footer {
+        dock: none;
+        width: 1fr;
+        margin-top: 3;
+        padding: 0 0;
+    }
+
+    .language_flag {
+        width: 10;
+        height: 4;
+        padding: 0 1;
+        margin-left: 1;
+        border: round $border-blurred;
+        border-subtitle-align: center;
+        border-subtitle-color: #909090;
+        opacity: 70%;
+        &:hover { opacity: 100%; }
+        &.-active {
+            opacity: 100%;
+            border: round $accent;
+            border-subtitle-color: $accent;
+            border-subtitle-style: bold;
+        }
     }
     """
 
@@ -451,7 +526,7 @@ class TipToiDlApp(App):
         self.api = TipToiAPI()
         self.catalog_items: list[dict] = []
         self.visible_items: list[dict] = []
-        self.run_worker(self.load_catalog(), exclusive=True)
+        self.set_language("de_DE")
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -471,27 +546,47 @@ class TipToiDlApp(App):
             yield Spinner("", id="spinner")
             yield Static("Download catalog", id="status_label")
             yield GradientProgress(total=100, show_eta=False, id="progress_bar")
-        yield Footer()
+        with Horizontal(id="bottom_bar"):
+            yield Footer()
+            for language in LanguageFlag.FLAGS:
+                yield LanguageFlag(cast("languages", language))
 
     async def on_unmount(self) -> None:
         """Clean up the API client when the app closes."""
         await self.api.aclose()
 
-    async def load_catalog(self) -> None:
+    def set_language(self, language: languages) -> None:
+        """Highlight the flag of the given language and reload the catalog in it."""
+        if language == getattr(self, "language", None):
+            return
+        self.language = language
+        for flag in self.query(LanguageFlag):
+            flag.set_class(flag.language == language, "-active")
+        self.run_worker(self.load_catalog(language), exclusive=True)
+
+    def action_next_language(self) -> None:
+        codes = list(LanguageFlag.FLAGS)
+        next_code = codes[(codes.index(self.language) + 1) % len(codes)]
+        self.set_language(cast("languages", next_code))
+
+    async def load_catalog(self, language: languages = "de_DE") -> None:
         """Fetch data from the API and update progress as we go."""
         bar = self.query_one("#progress_bar", GradientProgress)
         label = self.query_one("#status_label", Static)
         table = self.query_one("#catalog_table", DataTable)
 
         spinner = self.query_one(Spinner)
-        label.update("Fetching catalog…")
+        spinner.spin()
+        label.update(f"Fetching {language} catalog…")
+        bar.total = 100
+        bar.progress = 0
 
         timer = self.set_interval(
             1 / 20, lambda: bar.advance(1) if bar.progress < 90 else None
         )
 
         try:
-            catalog = await self.api.get_catalog()
+            catalog = await self.api.get_catalog(language)
         finally:
             timer.stop()
 
@@ -503,19 +598,26 @@ class TipToiDlApp(App):
 
         bar.progress = 100
         spinner.done()
-        label.update(f"Catalog loaded · {len(catalog.get('products', []))} products")
+        label.update(
+            f"{language} catalog loaded · {len(catalog.get('products', []))} products"
+        )
 
         self.catalog_items = catalog.get("products", [])
 
-        table.add_columns("Name", "ID", "Categories", "Age", "Description")
-        (
-            self.col_name,
-            self.col_id,
-            self.col_categories,
-            self.col_age,
-            self.col_description,
-        ) = table.columns.keys()
-        self._populate_table(self.catalog_items)
+        if not table.columns:
+            table.add_columns("Name", "ID", "Categories", "Age", "Description")
+            (
+                self.col_name,
+                self.col_id,
+                self.col_categories,
+                self.col_age,
+                self.col_description,
+            ) = table.columns.keys()
+        else:
+            # clear() keeps the widths of the previous catalog, so reset them
+            for column in table.columns.values():
+                column.content_width = cell_len(column.label.plain)
+        self._apply_filter()
 
     def _get_age_range(self, item: dict) -> str:
         fromAge = item.get("ageFrom")
@@ -584,8 +686,13 @@ class TipToiDlApp(App):
         """Filter the table as the user types in the search box."""
         if event.input.id != "search_input":
             return
+        self._apply_filter()
 
-        query = event.value.strip().lower()
+    def _apply_filter(self) -> None:
+        """Show only catalog items matching the current search query."""
+        if not self.catalog_items:
+            return
+        query = self.query_one("#search_input", Input).value.strip().lower()
         if not query:
             self._populate_table(self.catalog_items)
             return
