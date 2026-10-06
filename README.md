@@ -11,6 +11,12 @@ So I decided to build this little CLI that allows me to download and copy the au
 
 ## Setup
 
+tiptoi-dl requires Python 3.11 or newer.
+
+### Using uv (recommended)
+
+uv brings its own Python, so this works regardless of your distro's Python version.
+
 1. Install uv if you have not already (see https://docs.astral.sh/uv/getting-started/installation/)
 2. Run `uv tool install tiptoi-dl` (or `uv tool install git+https://github.com/Bouni/tiptoi-dl.git` for the main branch)
 3. Run the app: `tiptoi-dl`
@@ -18,6 +24,16 @@ So I decided to build this little CLI that allows me to download and copy the au
 > [!NOTE]
 > If the command is not found, the path is most likely not in your PATH.
 > run `uv tool update-shell` to fix that
+
+### Using pipx
+
+pipx is packaged by most distros, e.g. `sudo apt install pipx`, `sudo dnf install pipx` or `sudo pacman -S python-pipx`.
+
+1. Run `pipx install tiptoi-dl`
+2. Run the app: `tiptoi-dl`
+
+> [!NOTE]
+> If the command is not found, run `pipx ensurepath` and open a new terminal.
 
 ## Usage
 
@@ -35,7 +51,7 @@ On start, tiptoi-dl loads the full catalog and shows it in a table.
 If a TipToi pen is connected via USB and mounted, the `.gme` file is saved directly onto it.
 Otherwise it is saved into the current directory.
 
-![](demo.gif)
+![](https://raw.githubusercontent.com/Bouni/tiptoi-dl/main/demo.gif)
 
 ## Disclaimer
 
