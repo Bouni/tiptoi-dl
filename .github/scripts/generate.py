@@ -117,6 +117,4 @@ class TipToiCatalog:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
-        ttc = TipToiCatalog(sys.argv[1])
-    ttc = TipToiCatalog()
+    TipToiCatalog(sys.argv[1] if len(sys.argv) == 2 else "")
