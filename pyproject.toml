@@ -6,13 +6,16 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "anyio>=4.14.2",
-    "beautifulsoup4>=4.14.2",
-    "coloredlogs>=15.0.1",
     "httpx>=0.28.1",
     "psutil>=7.1.0",
-    "requests>=2.32.5",
     "textual>=8.2.8",
-    "tqdm>=4.67.1",
+]
+
+[dependency-groups]
+# Only used by .github/scripts/generate.py (catalog scraper), not shipped
+catalog = [
+    "httpx>=0.28.1",
+    "selectolax>=1.0.2",
 ]
 
 [project.scripts]

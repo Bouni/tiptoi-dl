@@ -35,11 +35,11 @@ jobs:
         run: uv python install
 
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: uv sync --only-group catalog
 
       - name: Scrape products
         run: |
-          uv run python .github/scripts/generate.py
+          uv run --only-group catalog python .github/scripts/generate.py
 
       - name: list files
         run: ls -la

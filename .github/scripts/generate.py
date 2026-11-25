@@ -5,15 +5,17 @@ import sys
 import time
 from pathlib import Path
 
-import coloredlogs
-import requests
-from bs4 import BeautifulSoup
+import httpx
+from selectolax.lexbor import LexborHTMLParser
 
 BASEPATH = Path(__file__).resolve().parents[2]
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    stream=sys.stdout,
+)
 LOGGER = logging.getLogger("TipToiCatalog")
-LOGGER.addHandler(logging.StreamHandler(sys.stdout))
-coloredlogs.install(level="INFO", logger=LOGGER)
 
 
 class TipToiCatalog:
@@ -23,6 +25,7 @@ class TipToiCatalog:
         )
         self.catalog = []
         self.products = []
+        self.client = httpx.Client(timeout=10, follow_redirects=True)
         LOGGER.info("Start data scraping")
         self.get_catalog(target)
         for product in self.catalog:
@@ -31,10 +34,13 @@ class TipToiCatalog:
         self.persist_products()
 
     def get_catalog(self, target):
-        r = requests.get(self.base_url, timeout=10)
+        r = self.client.get(self.base_url)
         LOGGER.info(f"Status code: {r.status_code}")
-        soup = BeautifulSoup(r.text, "html.parser")
-        links = soup.find_all("a", class_="mt-listing-detailed-subpage-title")
+        tree = LexborHTMLParser(r.text)
+        links = [
+            link.attributes
+            for link in tree.css("a.mt-listing-detailed-subpage-title")
+        ]
         LOGGER.info(f"Found {len(links)} links")
         for link in links:
             if target:
@@ -78,18 +84,15 @@ class TipToiCatalog:
         LOGGER.info(f"Get product data for {product['title']}")
         product_data = []
 
-        r = requests.get(product["url"], timeout=10)
+        r = self.client.get(product["url"])
         LOGGER.info(f"Status code: {r.status_code}")
 
-        soup = BeautifulSoup(r.text, "html.parser")
-        links = soup.find_all(
-            "a",
-            href=re.compile(r"\.gme"),
-        )
+        tree = LexborHTMLParser(r.text)
+        links = tree.css('a[href*=".gme"]')
 
         for n, link in enumerate(links):
             data = {}
-            data["gme"] = link.get("href")
+            data["gme"] = link.attributes.get("href")
             data["title"] = product["title"]
             data["number"] = ""
             if product["numbers"]:
@@ -100,8 +103,9 @@ class TipToiCatalog:
                         "Inconsitent data for %s, catalog maybe not 100%% complete",
                         data["title"],
                     )
-            if link.img:
-                data["img"] = self.get_product_image(link.img.get("src"))
+            img = link.css_first("img")
+            if img is not None:
+                data["img"] = self.get_product_image(img.attributes.get("src"))
             product_data.append(data)
         return product_data
 
@@ -113,6 +117,4 @@ class TipToiCatalog:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
-        ttc = TipToiCatalog(sys.argv[1])
-    ttc = TipToiCatalog()
+    TipToiCatalog(sys.argv[1] if len(sys.argv) == 2 else "")
