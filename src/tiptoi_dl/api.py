@@ -1,3 +1,4 @@
+import csv
 import logging
 import time
 from collections.abc import Callable
@@ -14,6 +15,47 @@ CLIENT_SECRET = "CYmWkYyhY3traWuGd5cHcNV"
 TOKEN_URL = "https://oauth.ravensburger.com/oauth/token"
 
 languages = Literal["de_DE", "nl_NL", "fr_FR", "it_IT", "ru_RU"]
+
+# Public list of all audio files (id, version, url, fileName), no auth needed
+CSV_URL = "https://cdn.ravensburger.de/db/tiptoi.csv"
+
+
+def parse_csv_catalog(data: bytes) -> list[dict]:
+    """Parse tiptoi.csv into product dicts shaped like the API's "products"."""
+    for encoding in ("utf-8-sig", "cp1252", "latin-1"):
+        try:
+            text = data.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+    lines = text.splitlines()
+    start = next(
+        (i for i, line in enumerate(lines) if line.lower().startswith("items._id")),
+        None,
+    )
+    if start is None:
+        return []
+    products = []
+    for row in csv.reader(lines[start + 1 :]):
+        if len(row) < 3:
+            continue
+        item_id, version, url = (cell.strip() for cell in row[:3])
+        if not url.lower().split("?")[0].endswith(".gme"):
+            continue  # firmware and WLAN module updates
+        file_name = url.split("?")[0].rsplit("/", 1)[-1]
+        name = row[3].strip() if len(row) > 3 and row[3].strip() else file_name[:-4]
+        products.append(
+            {
+                "id": item_id,
+                "name": name.replace("_", " "),
+                "categories": [],
+                "description": "",
+                "gameFiles": [
+                    {"url": url, "fileName": file_name, "version": version}
+                ],
+            }
+        )
+    return products
 
 
 class TipToiAPI:
@@ -67,12 +109,32 @@ class TipToiAPI:
         self.client.headers["Authorization"] = f"Bearer {self.jwt}"
 
     async def get_catalog(self, language: languages = "de_DE") -> dict:
-        await self._ensure_token()
-        r = await self.client.get(f"{self.base_url}/catalog/{language}")
-        if r.is_success:
-            return r.json()
-        logger.error("Failed to fetch catalog: %s", r.status_code)
-        return {}
+        catalog: dict = {}
+        try:
+            await self._ensure_token()
+            r = await self.client.get(f"{self.base_url}/catalog/{language}")
+            if r.is_success:
+                catalog = r.json()
+            else:
+                logger.error("Failed to fetch catalog: %s", r.status_code)
+        except httpx.HTTPError as exc:
+            logger.error("Failed to fetch catalog: %s", exc)
+        if catalog.get("products"):
+            return catalog
+        # The app API has been returning an empty catalog since late 2026.
+        # Fall back to Ravensburger's public CSV list (German books only).
+        logger.info("API catalog empty, falling back to %s", CSV_URL)
+        try:
+            return {"products": await self.get_csv_catalog()}
+        except httpx.HTTPError as exc:
+            logger.error("Failed to fetch CSV catalog: %s", exc)
+            return catalog
+
+    async def get_csv_catalog(self) -> list[dict]:
+        """Fetch the public CSV list and turn it into API-style product dicts."""
+        r = await self.file_client.get(CSV_URL, timeout=30)
+        r.raise_for_status()
+        return parse_csv_catalog(r.content)
 
     async def get_audiofile(
         self,
